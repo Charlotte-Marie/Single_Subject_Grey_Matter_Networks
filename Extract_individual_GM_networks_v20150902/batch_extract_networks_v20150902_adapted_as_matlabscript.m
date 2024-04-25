@@ -39,12 +39,9 @@
 % Author: Betty Tijms, 2011, version 12.08.2013
 % -------------------------------------------------------------------------------------------------------------------------------
 
-%cd /usr/local/MATLAB/R2011a/bin/
-matlab -nodesktop
-
 % --- ADJUST FOLLOWING ----%
 % Go to the directory where you want to store your output (i.e., networks)
-result_dir ='Y:/PsyThera/Projekte_Meinke/Structural_covariance/test_script/output'; 
+result_dir ='Y:/PsyThera/Projekte_Meinke/Structural_covariance/test_script/output_faster'; 
 cd(result_dir)
 
 % FILL IN THE FILE NAME with full path that contains the text file with all the grey matter segmentations 
@@ -55,19 +52,19 @@ cd(result_dir)
 [CN_a3]=textread('Y:/PsyThera/Projekte_Meinke/Structural_covariance/test_script/input_data/filenames_T1.txt','%s');
 
 % FILL IN THE FULL PATH of the directory where the resliced images should live.
-reslice_dir = 'Y:/PsyThera/Projekte_Meinke/Structural_covariance/test_script/resliced_data';
+reslice_dir = 'Y:/PsyThera/Projekte_Meinke/Structural_covariance/test_script/resliced_data/';
 
 % Add the path to the Nifti toolbox (see read me file for download link)
-addpath "C:/Program Files/MATLAB/R2022b/toolbox/NIfTI_20140122"
+%addpath "Y:/PsyThera/Projekte_Meinke/Structural_covariance/test_script/input_data/NIfTI_20140122";
 
 % PATH where the canonical SPM image "avg305T1.nii´ can be found --> this is used to reslice the images
 MNI_template= 'Y:/PsyThera/Projekte_Meinke/Structural_covariance/test_script/input_data/tpl-MNI152NLin2009cAsym_res-02_desc-brain_T1w.nii.gz';
 
 % Please provide path to the folder Extract_individual_GM_networks
-all_network_scripts_path ='C:/Users/meinkcha.PSYCHOLOGIE/Documents/GitHub/Single_Subject_Grey_Matter_Networks/Extract_individual_GM_networks_v20150902';
+all_network_scripts_path ='C:/Users/meinkcha.PSYCHOLOGIE/Documents/GitHub/Single_Subject_Grey_Matter_Networks/Extract_individual_GM_networks_v20150902/';
 
 % Please provide path to the folder bl_ind
-bl_dir = 'C:/Users/meinkcha.PSYCHOLOGIE/Documents/GitHub/Single_Subject_Grey_Matter_Networks/Extract_individual_GM_networks_v20150902/bl_ind';
+bl_dir = 'C:/Users/meinkcha.PSYCHOLOGIE/Documents/GitHub/Single_Subject_Grey_Matter_Networks/Extract_individual_GM_networks_v20150902/bl_ind/';
 
 
 %% -----Finished with the adjustments ---%
@@ -85,8 +82,8 @@ count_gm_masks=size(CN_a1,1);
 n=3;
 s=n^3;
 
-% Loop through all the grey matter segmentations listed in CN_a1 and extract network. Takes ~25 minutes per scan.
-
+%% Loop through all the grey matter segmentations listed in CN_a1 and extract network. Takes ~25 minutes per scan.
+tic; % Start timing
 for gm_mask_idx=1:count_gm_masks	
 	% Get this scan and do the following loop to threshold and then reslice it
 	gm_mask=char(CN_a1(gm_mask_idx));
@@ -108,7 +105,7 @@ for gm_mask_idx=1:count_gm_masks
 	% Make sure that the native image realigns with MNI images
 	coreg_est = spm_coreg(MNI_template, t1_scan); %coregister
 	M = inv(spm_matrix(coreg_est));
-	MM = spm_get_space('temp_gm_mask.nii); %adjust the header of the grey matter image to store these realigned parameters
+	MM = spm_get_space('temp_gm_mask.nii'); % adjust the header of the grey matter image to store these realigned parameters
 	spm_get_space('temp_gm_mask.nii', M *MM);
 	
 	% save the reorientation paramters
@@ -150,12 +147,12 @@ for gm_mask_idx=1:count_gm_masks
 	save data/off_set.mat off_set
 
 	% Get bind and store bind too. Bind contains the indices of the cubes, so we can efficiently do computations later. It is a long vector of which every 27 consecutive voxels are a cube.
-	%tt=strcat(bl_dir, off_set, '/data/bind.m');
-	load data/bind.m
+	tt=strcat(bl_dir, off_set, '/data/bind.mat');
+	load data\bind.mat
 	
 	% Convert to single, for memory reasons
 	bind=single(bind);
-	delete data/bind.m
+	delete data/bind.mat
 	save data/bind.mat bind	
 
 	% Now create:
@@ -188,7 +185,7 @@ for gm_mask_idx=1:count_gm_masks
 	clear lookup lb 
 
 	%% Randomise cubeS: Create a 'random brain' to estimate the threshold with for later stages
-	[rcubes, rlookup]= create_rcubes (cubes, n, Sa, Va, off_set, bind, bl_dir, nz);
+	[rcubes, rlookup]= create_rrois (cubes, n, Sa, Va, off_set, bind, bl_dir, nz);
 
 	% save rcubes and rlookup
 	save data/rcubes.mat rcubes
@@ -221,6 +218,7 @@ for gm_mask_idx=1:count_gm_masks
 
 
 	cd ..
-	im
 
 end
+elapsedTime = toc;
+disp(['Elapsed Time: ' num2str(elapsedTime) ' seconds']);
